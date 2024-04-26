@@ -23,7 +23,25 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 
 // Notes is the resolver for the notes field.
 func (r *queryResolver) Notes(ctx context.Context) ([]*model.Note, error) {
-	panic(fmt.Errorf("not implemented: Notes - notes"))
+	q := "select * from notes"
+	rows, err := r.Repo.GetConnection().Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	notes := []*model.Note{}
+	for rows.Next() {
+		note := model.Note{
+			User: &model.User{},
+		}
+		if err := rows.Scan(&note.ID, &note.Text, &note.User.ID); err != nil {
+			return nil, err
+		}
+
+		notes = append(notes, &note)
+	}
+
+	return notes, nil
 }
 
 // NoteByUser is the resolver for the noteByUser field.

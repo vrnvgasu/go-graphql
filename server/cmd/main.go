@@ -18,12 +18,13 @@ const defaultPort = "8080"
 
 func main() {
 	// Клиент для psql
-	_, err := psql.New(context.Background(), "postgres://module12_task05:module12_task05@localhost:5432/module12_task05?sslmode=disable&connect_timeout=5")
+	repo, err := psql.New(context.Background(), "postgres://module12_task05:module12_task05@localhost:5432/module12_task05?sslmode=disable&connect_timeout=5")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Println("Hello from task 05 sever!")
+	////////////////
 
 	////////////////////
 	port := os.Getenv("PORT")
@@ -31,7 +32,9 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
+		Repo: repo,
+	}}))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
