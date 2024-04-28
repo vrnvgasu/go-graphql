@@ -6,19 +6,40 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"server/internal/graph/generated"
 	"server/internal/graph/model"
 )
 
 // CreateNote is the resolver for the createNote field.
 func (r *mutationResolver) CreateNote(ctx context.Context, input model.NewNote) (*model.Note, error) {
-	panic(fmt.Errorf("not implemented: CreateNote - createNote"))
+	q := "insert into notes (text, user_id) values ($1, $2) returning id"
+	var id int
+	if err := r.Repo.GetConnection().QueryRow(ctx, q, input.Text, input.UserID).Scan(&id); err != nil {
+		return nil, err
+	}
+
+	return &model.Note{
+		ID:   id,
+		Text: input.Text,
+		User: &model.User{
+			ID: input.UserID,
+		},
+	}, nil
 }
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
+	q := "insert into users (name, age) values ($1, $2) returning id"
+	var id int
+	if err := r.Repo.GetConnection().QueryRow(ctx, q, input.Name, input.Age).Scan(&id); err != nil {
+		return nil, err
+	}
+
+	return &model.User{
+		ID:   id,
+		Name: input.Name,
+		Age:  input.Age,
+	}, nil
 }
 
 // Notes is the resolver for the notes field.
@@ -46,7 +67,25 @@ func (r *queryResolver) Notes(ctx context.Context) ([]*model.Note, error) {
 
 // NoteByUser is the resolver for the noteByUser field.
 func (r *queryResolver) NoteByUser(ctx context.Context, userID int) ([]*model.Note, error) {
-	panic(fmt.Errorf("not implemented: NoteByUser - noteByUser"))
+	q := "select * from notes where user_id = $1"
+	rows, err := r.Repo.GetConnection().Query(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	notes := []*model.Note{}
+	for rows.Next() {
+		note := model.Note{
+			User: &model.User{},
+		}
+		if err := rows.Scan(&note.ID, &note.Text, &note.User.ID); err != nil {
+			return nil, err
+		}
+
+		notes = append(notes, &note)
+	}
+
+	return notes, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
